@@ -63,7 +63,7 @@ jobs:
             chmod 755 "${BINARY_NAME}${EXT}"
           fi
           zip "${BINARY_NAME}_${GOOS}_${GOARCH}.zip" "${BINARY_NAME}${EXT}"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.BINARY_NAME }}_${{ matrix.goos }}_${{ matrix.goarch }}
           path: "*.zip"
@@ -75,7 +75,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
