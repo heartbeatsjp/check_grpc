@@ -75,7 +75,7 @@ func GetProtoRegistryFromFile(filePath string) (ProtoRegistryFiles, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	protoReg, err := GetProtoRegistry(file)
 	return protoReg, err
 }

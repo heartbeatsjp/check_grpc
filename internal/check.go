@@ -86,7 +86,7 @@ func Check(opts Options) nagios.NagiosResult {
 	if err != nil {
 		return nagios.NewNagiosResult(nagios.UNKNOWN, fmt.Sprintf("Failed to create gRPC client: %v", err))
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
