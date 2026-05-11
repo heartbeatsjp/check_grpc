@@ -38,9 +38,9 @@ func init() {
 	rootCmd.Flags().StringVarP(&opts.Host, "host", "H", "", "Target gRPC endpoint (host:port) (required)")
 	rootCmd.Flags().StringVarP(&opts.Method, "method", "m", "", "Target gRPC method (e.g., package.Service/Method) (required)")
 	rootCmd.Flags().StringVarP(&opts.DescriptorSetFile, "descriptor_set_file", "D", "", "Path to the descriptor_set file (*.pb) (required)")
-	rootCmd.MarkFlagRequired("host")
-	rootCmd.MarkFlagRequired("method")
-	rootCmd.MarkFlagRequired("descriptor_set_file")
+	cobra.CheckErr(rootCmd.MarkFlagRequired("host"))
+	cobra.CheckErr(rootCmd.MarkFlagRequired("method"))
+	cobra.CheckErr(rootCmd.MarkFlagRequired("descriptor_set_file"))
 
 	// Option
 	rootCmd.Flags().BoolVarP(&opts.UseTLS, "secure", "S", false, "Use TLS/SSL for the gRPC connection")

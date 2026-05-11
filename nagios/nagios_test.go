@@ -130,7 +130,7 @@ func TestNagiosResult_ExitCmd(t *testing.T) {
 			// Verify the captured output
 			_ = w.Close()
 			var buf bytes.Buffer
-			io.Copy(&buf, r)
+			_, _ = io.Copy(&buf, r)
 			out := buf.String()
 			if string(out) != tt.expectedOutput {
 				t.Errorf("ExitCmd() printed incorrect output: got %q, want %q", string(out), tt.expectedOutput)

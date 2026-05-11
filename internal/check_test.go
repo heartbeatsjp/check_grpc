@@ -53,7 +53,11 @@ func TestMain(m *testing.M) {
 
 	s := grpc.NewServer()
 	grpc_health_v1.RegisterHealthServer(s, &testHealthServer{})
-	go s.Serve(lis)
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
 
 	code := m.Run()
 	s.GracefulStop()
