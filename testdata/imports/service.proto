@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package com.example.imports;
+
+import "common.proto";
+
+service UserService {
+  rpc GetUser (com.example.common.User) returns (com.example.common.User);
+}

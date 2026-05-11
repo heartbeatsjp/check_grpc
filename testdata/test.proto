@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package com.example;
+
+message MyRequest {
+  string name = 1;
+  int32 age = 2;
+}
+
+message MyResponse {
+  string res = 1;
+  }
+
+service MyService {
+  rpc MyMethod(MyRequest) returns (MyResponse);
+}
+
