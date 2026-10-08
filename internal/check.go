@@ -29,18 +29,27 @@ type Options struct {
 	UseTLS            bool
 	Timeout           int
 	RequestData       string
-	WarningThreshold  int
-	CriticalThreshold int
+	WarningThreshold  float64
+	CriticalThreshold float64
 	ExpectedResponse  string
 	ExpectedStatusCode int
 	RawMetadata       []string
 	VerboseFlag       bool
 }
 
+// thresholdDuration converts a threshold in (possibly fractional) seconds to a time.Duration.
+// A negative value means the threshold is disabled, in which case enabled is false.
+func thresholdDuration(sec float64) (d time.Duration, enabled bool) {
+	if sec < 0 {
+		return 0, false
+	}
+	return time.Duration(sec * float64(time.Second)), true
+}
+
 func Check(opts Options) nagios.NagiosResult {
 	timeout := time.Duration(opts.Timeout) * time.Second
-	warningThresholdTime := time.Duration(opts.WarningThreshold) * time.Second
-	criticalThresholdTime := time.Duration(opts.CriticalThreshold) * time.Second
+	warningThresholdTime, warningEnabled := thresholdDuration(opts.WarningThreshold)
+	criticalThresholdTime, criticalEnabled := thresholdDuration(opts.CriticalThreshold)
 
 	var credential credentials.TransportCredentials
 	var err error
@@ -124,10 +133,10 @@ func Check(opts Options) nagios.NagiosResult {
 	if opts.VerboseFlag {
 		fmt.Printf("%v\n", outputContent)
 	}
-	if opts.CriticalThreshold != -1 && responseTime > criticalThresholdTime {
+	if criticalEnabled && responseTime > criticalThresholdTime {
 		return nagios.NewNagiosResult(nagios.CRITICAL, fmt.Sprintf("Response Time: %s > %s", responseTime, criticalThresholdTime))
 	}
-	if opts.WarningThreshold != -1 && responseTime > warningThresholdTime {
+	if warningEnabled && responseTime > warningThresholdTime {
 		return nagios.NewNagiosResult(nagios.WARNING, fmt.Sprintf("Response Time: %s > %s", responseTime, warningThresholdTime))
 	}
 	if !strings.Contains(outputContent, opts.ExpectedResponse) {
