@@ -103,8 +103,8 @@ check_grpc -H <host:port> -m <package.Service/Method> -D <descriptor.pb> [option
 |------|-------|---------|-------------|
 | `--secure` | `-S` | `false` | Use TLS/SSL for the gRPC connection (see Limitations) |
 | `--timeout` | `-t` | `10` | Timeout for the gRPC call (integer seconds) |
-| `--warning` | `-w` | `-1` (disabled) | WARNING threshold for response time (integer seconds) |
-| `--critical` | `-c` | `-1` (disabled) | CRITICAL threshold for response time (integer seconds) |
+| `--warning` | `-w` | `-1` (disabled) | WARNING threshold for response time (seconds; decimals such as `0.5` allowed) |
+| `--critical` | `-c` | `-1` (disabled) | CRITICAL threshold for response time (seconds; decimals such as `0.5` allowed) |
 | `--string` | `-s` | `""` | String to expect in the response content |
 | `--argument` | `-a` | `""` | Request data in JSON format |
 | `--expect_status_code` | `-e` | `0` (OK) | Expected gRPC status code |
@@ -129,6 +129,12 @@ check_grpc -H grpc.example.com:443 -m grpc.health.v1.Health/Check -D health.pb -
 
 ```sh
 check_grpc -H localhost:50051 -m grpc.health.v1.Health/Check -D health.pb -w 2 -c 5
+```
+
+Sub-second thresholds are also supported (warn at 300ms, critical at 800ms):
+
+```sh
+check_grpc -H localhost:50051 -m grpc.health.v1.Health/Check -D health.pb -w 0.3 -c 0.8
 ```
 
 **With request data and expected response string:**
@@ -207,4 +213,4 @@ testdata/   Sample .proto and .pb files used in tests
 - The `--string` flag performs a substring match against the protobuf text-format representation of the response, not JSON.
 - The method format must be `package.Service/Method` (e.g., `grpc.health.v1.Health/Check`).
 - The `--secure` flag uses the system certificate pool only. Self-signed or private CA certificates are not currently supported (no `--cacert` option).
-- Response-time thresholds (`--timeout`, `--warning`, `--critical`) accept **integer seconds only**; sub-second values such as `0.5` are not supported.
+- `--timeout` accepts **integer seconds only**; sub-second values such as `0.5` are not supported. (`--warning` / `--critical` accept decimal seconds.)

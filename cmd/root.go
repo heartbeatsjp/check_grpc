@@ -45,8 +45,8 @@ func init() {
 	// Option
 	rootCmd.Flags().BoolVarP(&opts.UseTLS, "secure", "S", false, "Use TLS/SSL for the gRPC connection")
 	rootCmd.Flags().IntVarP(&opts.Timeout, "timeout", "t", 10, "Timeout for the gRPC call [sec]")
-	rootCmd.Flags().IntVarP(&opts.WarningThreshold, "warning", "w", -1, "Warning threshold for response time [sec]")
-	rootCmd.Flags().IntVarP(&opts.CriticalThreshold, "critical", "c", -1, "CRITICAL threshold for response time [sec]")
+	rootCmd.Flags().Float64VarP(&opts.WarningThreshold, "warning", "w", -1, "Warning threshold for response time [sec] (decimals allowed, e.g. 0.5)")
+	rootCmd.Flags().Float64VarP(&opts.CriticalThreshold, "critical", "c", -1, "CRITICAL threshold for response time [sec] (decimals allowed, e.g. 0.5)")
 	rootCmd.Flags().StringVarP(&opts.ExpectedResponse, "string", "s", "", "String to expect in the content")
 	rootCmd.Flags().StringVarP(&opts.RequestData, "argument", "a", "", "Request data in JSON format")
 	rootCmd.Flags().IntVarP(&opts.ExpectedStatusCode, "expect_status_code", "e", 0, "gRPC Status code to expect in the content")

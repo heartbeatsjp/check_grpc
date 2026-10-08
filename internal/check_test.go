@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -215,6 +216,54 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
+			name: "OK with decimal thresholds not exceeded",
+			opts: Options{
+				Host:              testServerAddr,
+				Method:            "grpc.health.v1.Health/Check",
+				DescriptorSetFile: "../testdata/sample.pb",
+				ExpectedResponse:  `SERVING`,
+				Timeout:           10,
+				WarningThreshold:  4.5,
+				CriticalThreshold: 9.5,
+			},
+			want: nagios.NagiosResult{
+				Status:  nagios.OK,
+				Message: "gRPC 0 OK - invoke grpc.health.v1.Health/Check",
+			},
+		},
+		{
+			name: "WARNING on decimal warning threshold exceeded",
+			opts: Options{
+				Host:              testServerAddr,
+				Method:            "grpc.health.v1.Health/Check",
+				DescriptorSetFile: "../testdata/sample.pb",
+				ExpectedResponse:  `SERVING`,
+				Timeout:           10,
+				WarningThreshold:  0.000001,
+				CriticalThreshold: 9.5,
+			},
+			want: nagios.NagiosResult{
+				Status:  nagios.WARNING,
+				Message: "Response Time",
+			},
+		},
+		{
+			name: "CRITICAL on decimal critical threshold exceeded",
+			opts: Options{
+				Host:              testServerAddr,
+				Method:            "grpc.health.v1.Health/Check",
+				DescriptorSetFile: "../testdata/sample.pb",
+				ExpectedResponse:  `SERVING`,
+				Timeout:           10,
+				WarningThreshold:  0.000001,
+				CriticalThreshold: 0.000002,
+			},
+			want: nagios.NagiosResult{
+				Status:  nagios.CRITICAL,
+				Message: "Response Time",
+			},
+		},
+		{
 			name: "CRITICAL on unexpected status code",
 			opts: Options{
 				Host:                   testServerAddr,
@@ -243,6 +292,33 @@ func TestCheck(t *testing.T) {
 			}
 			if !strings.Contains(got.Message, tt.want.Message) {
 				t.Errorf("Check() message = %q, want substring %q", got.Message, tt.want.Message)
+			}
+		})
+	}
+}
+
+func TestThresholdDuration(t *testing.T) {
+	tests := []struct {
+		name        string
+		sec         float64
+		wantD       time.Duration
+		wantEnabled bool
+	}{
+		{name: "integer seconds", sec: 2, wantD: 2 * time.Second, wantEnabled: true},
+		{name: "half second", sec: 0.5, wantD: 500 * time.Millisecond, wantEnabled: true},
+		{name: "sub-second", sec: 0.3, wantD: 300 * time.Millisecond, wantEnabled: true},
+		{name: "mixed", sec: 1.25, wantD: 1250 * time.Millisecond, wantEnabled: true},
+		{name: "microsecond", sec: 0.000001, wantD: time.Microsecond, wantEnabled: true},
+		{name: "zero is enabled", sec: 0, wantD: 0, wantEnabled: true},
+		{name: "-1 is disabled", sec: -1, wantD: 0, wantEnabled: false},
+		{name: "other negative is disabled", sec: -0.5, wantD: 0, wantEnabled: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotD, gotEnabled := thresholdDuration(tt.sec)
+			if gotD != tt.wantD || gotEnabled != tt.wantEnabled {
+				t.Errorf("thresholdDuration(%v) = (%v, %v), want (%v, %v)", tt.sec, gotD, gotEnabled, tt.wantD, tt.wantEnabled)
 			}
 		})
 	}
