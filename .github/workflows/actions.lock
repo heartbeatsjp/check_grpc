@@ -9,7 +9,7 @@ workflows:
         - 'actions/setup-go@v7.0.0'
         - 'actions/upload-artifact@v7.0.2'
         - 'golangci/golangci-lint-action@v9.3.0'
-        - 'softprops/action-gh-release@v3.0.3'
+        - 'softprops/action-gh-release@v3.0.4'
 dependencies:
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
@@ -36,8 +36,8 @@ dependencies:
         commit: 'sha1-ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a'
         owner_id: 35628013
         repo_id: 232539879
-    'softprops/action-gh-release@v3.0.3':
-        ref: 'v3.0.3'
-        commit: 'sha1-efb35369e0ad2afab669f228072c1b0d510eae64'
+    'softprops/action-gh-release@v3.0.4':
+        ref: 'v3.0.4'
+        commit: 'sha1-8a0cd651e5b2365bd640854a3fa5dfc70e4875f3'
         owner_id: 2242
         repo_id: 204253808
