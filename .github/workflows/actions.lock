@@ -10,6 +10,9 @@ workflows:
         - 'actions/upload-artifact@v7.0.2'
         - 'golangci/golangci-lint-action@v9.3.0'
         - 'softprops/action-gh-release@v3.0.4'
+    '.github/workflows/vulncheck-autofix.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'actions/setup-go@v7.0.0'
 dependencies:
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'

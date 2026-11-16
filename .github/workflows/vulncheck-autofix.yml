@@ -1,0 +1,126 @@
+name: Vulncheck autofix
+
+# Runs govulncheck on a schedule. When it reports vulnerabilities that a
+# Go patch release fixes, bump the `go` directive in go.mod and open a PR.
+#
+# PRs opened with the default GITHUB_TOKEN do not trigger CI. To have CI
+# run on the generated PR, store a PAT (or GitHub App token) with
+# contents/pull-requests write access as the VULNCHECK_PR_TOKEN secret.
+# With GITHUB_TOKEN, "Allow GitHub Actions to create and approve pull
+# requests" must be enabled in the repository settings.
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # Every Monday 09:00 JST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: vulncheck-autofix
+  cancel-in-progress: false
+
+env:
+  GOVULNCHECK: golang.org/x/vuln/cmd/govulncheck@v1.9.0
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          token: ${{ secrets.VULNCHECK_PR_TOKEN || github.token }}
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Run govulncheck
+        id: scan
+        run: |
+          set +e
+          go run "$GOVULNCHECK" ./... > "$RUNNER_TEMP/before.txt" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/before.txt"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          # 0: no vulnerabilities, 3: vulnerabilities found, others: error
+          if [ "$status" -ne 0 ] && [ "$status" -ne 3 ]; then
+            exit "$status"
+          fi
+
+      - name: Bump Go and open PR
+        if: steps.scan.outputs.status == '3'
+        env:
+          GH_TOKEN: ${{ secrets.VULNCHECK_PR_TOKEN || github.token }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          current=$(go mod edit -json | jq -r .Go)
+          minor=$(echo "$current" | cut -d. -f1,2)
+          latest=$(curl -fsSL 'https://go.dev/dl/?mode=json' \
+            | jq -r --arg p "go${minor}." '[.[] | select(.stable) | .version | select(startswith($p))][0] // empty' \
+            | sed 's/^go//')
+
+          if [ -z "$latest" ]; then
+            echo "::error::Go ${minor} is no longer a supported release. Upgrade the minor version manually."
+            exit 1
+          fi
+          if [ "$latest" = "$current" ]; then
+            echo "::error::Already on go${current}, the latest patch release. The findings need a manual fix."
+            exit 1
+          fi
+
+          branch="autofix/go-${latest}"
+          if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
+            echo "::notice::Branch ${branch} already exists. Skipping."
+            exit 0
+          fi
+
+          export GOTOOLCHAIN="go${latest}"
+          go mod edit -go="$latest"
+          go mod tidy
+          go test ./...
+
+          set +e
+          go run "$GOVULNCHECK" ./... > "$RUNNER_TEMP/after.txt" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/after.txt"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::govulncheck still fails on go${latest}. The findings need a manual fix."
+            exit 1
+          fi
+
+          title="fix: bump Go to ${latest} to address govulncheck findings"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add go.mod go.sum
+          git commit -m "$title"
+          git push origin "$branch"
+
+          body="$RUNNER_TEMP/body.md"
+          {
+            echo '## Summary'
+            echo "- Bump the Go version in \`go.mod\` from ${current} to ${latest}."
+            echo
+            echo '## Why'
+            echo "The scheduled govulncheck run reported vulnerabilities on go${current} that are fixed in go${latest}."
+            echo
+            echo '<details><summary>govulncheck output</summary>'
+            echo
+            echo '```'
+            head -c 50000 "$RUNNER_TEMP/before.txt"
+            echo '```'
+            echo
+            echo '</details>'
+            echo
+            echo '## Test'
+            echo "- \`go test ./...\` passes on go${latest}"
+            echo "- \`govulncheck ./...\` reports no vulnerabilities affecting the code on go${latest}"
+            echo
+            echo "_Opened automatically by the [Vulncheck autofix](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) workflow._"
+          } > "$body"
+
+          gh pr create --base "$BASE_BRANCH" --head "$branch" --title "$title" --body-file "$body"
